@@ -4,7 +4,7 @@ from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
-from starlette.routing import Route
+from starlette.routing import Route, Mount
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -103,8 +103,8 @@ async def handle_sse(request: Request):
 
 starlette_app = Starlette(
     routes=[
-        Route("/sse", endpoint=handle_sse),
-        Route("/messages/", endpoint=sse.handle_post_message, methods=["POST"])
+        Route("/sse", endpoint=handle_sse, methods=["GET"]),
+        Mount("/messages/", app=sse.handle_post_message)
     ],
     debug=True
 )
