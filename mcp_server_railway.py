@@ -1,15 +1,18 @@
 import os
-import asyncio
 from datetime import datetime
 from mcp.server import Server
-from mcp.server.sse import SseServerTransport  # FIXED: Changed from sse_server
+from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
 from starlette.routing import Route
 from starlette.requests import Request
+from starlette.responses import Response
 
 app_mcp = Server("railway-mcp-server")
 memory_store = {}
+
+# Initialize SSE transport OUTSIDE the handler
+sse = SseServerTransport("/messages/")
 
 @app_mcp.list_tools()
 async def list_tools() -> list[Tool]:
@@ -84,14 +87,19 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=f"Memory '{key}': {value}")]
     raise ValueError(f"Unknown tool: {name}")
 
-# FIXED: Changed to use SseServerTransport instead of sse_server()
+# FIXED: Correct SseServerTransport usage
 async def handle_sse(request: Request):
-    async with SseServerTransport("/messages") as transport:
+    async with sse.connect_sse(
+        request.scope,
+        request.receive,
+        request._send
+    ) as (read_stream, write_stream):
         await app_mcp.run(
-            transport.read_stream,
-            transport.write_stream,
+            read_stream,
+            write_stream,
             app_mcp.create_initialization_options()
         )
+    return Response()
 
 starlette_app = Starlette(
     routes=[Route("/sse", endpoint=handle_sse)],
