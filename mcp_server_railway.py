@@ -102,7 +102,10 @@ async def handle_sse(request: Request):
     return Response()
 
 starlette_app = Starlette(
-    routes=[Route("/sse", endpoint=handle_sse)],
+    routes=[
+        Route("/sse", endpoint=handle_sse),
+        Route("/messages/", endpoint=sse.handle_post_message, methods=["POST"])
+    ],
     debug=True
 )
 
